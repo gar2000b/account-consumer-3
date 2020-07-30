@@ -34,7 +34,7 @@ public class AccountRepository {
 		Document accountDocument = Document.parse(accountV1.toString());
 		MongoCollection<Document> accountsCollection = database.getCollection("accounts");
 		accountsCollection.insertOne(accountDocument);
-		System.out.println("Account Persisted to accounts collection");
+//		System.out.println("Account Persisted to accounts collection");
 	}
 
 	public void updateAccount(AccountV1 accountV1) {
@@ -42,7 +42,7 @@ public class AccountRepository {
 		Document accountDocument = Document.parse(accountV1.toString());
 		MongoCollection<Document> accountsCollection = database.getCollection("accounts");
 		accountsCollection.replaceOne(new Document("id", accountV1.getId().toString()), accountDocument);
-		System.out.println("Account Updated in accounts collection");
+//		System.out.println("Account Updated in accounts collection");
 	}
 
 	public AccountV1 getAccountV1(String accountId) {
@@ -65,7 +65,7 @@ public class AccountRepository {
 		Document accountDocument = Document.parse(accountV2.toString());
 		MongoCollection<Document> accountsCollection = database.getCollection("accounts");
 		accountsCollection.insertOne(accountDocument);
-		System.out.println("Account Persisted to accounts collection");
+//		System.out.println("Account Persisted to accounts collection");
 	}
 	
 	public void updateAccount(AccountV2 accountV2) {
@@ -73,7 +73,7 @@ public class AccountRepository {
 		Document accountDocument = Document.parse(accountV2.toString());
 		MongoCollection<Document> accountsCollection = database.getCollection("accounts");
 		accountsCollection.replaceOne(new Document("id", accountV2.getId().toString()), accountDocument);
-		System.out.println("Account Updated in accounts collection");
+//		System.out.println("Account Updated in accounts collection");
 	}
 	
 	public AccountV2 getAccountV2(String accountId) {
@@ -96,7 +96,7 @@ public class AccountRepository {
 		Document accountDocument = Document.parse(accountV3.toString());
 		MongoCollection<Document> accountsCollection = database.getCollection("accounts");
 		accountsCollection.insertOne(accountDocument);
-		System.out.println("Account Persisted to accounts collection");
+//		System.out.println("Account Persisted to accounts collection");
 	}
 	
 	public void updateAccount(AccountV3 accountV3) {
@@ -104,7 +104,7 @@ public class AccountRepository {
 		Document accountDocument = Document.parse(accountV3.toString());
 		MongoCollection<Document> accountsCollection = database.getCollection("accounts");
 		accountsCollection.replaceOne(new Document("id", accountV3.getId().toString()), accountDocument);
-		System.out.println("Account Updated in accounts collection");
+//		System.out.println("Account Updated in accounts collection");
 	}
 	
 	public AccountV3 getAccountV3(String accountId) {
