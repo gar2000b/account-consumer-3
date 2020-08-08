@@ -4,14 +4,18 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +49,8 @@ public class Consumer {
 	private boolean runningFlag = false;
 	private long beginSnapshotOffset;
 	private long versionReconstitutedFrom;
+
+	private Set<TopicPartition> assignment;
 
 	@PostConstruct
 	public void startConsumer() {
@@ -173,6 +179,7 @@ public class Consumer {
 
 	private void processRecords() {
 		consumer.poll(Duration.ofMillis(0));
+		assignment = consumer.assignment();
 		// consumer.seekToBeginning(consumer.assignment());
 		runningFlag = true;
 		System.out.println("Spinning up kafka account consumer");
@@ -185,13 +192,15 @@ public class Consumer {
 					System.out.println("There was a problem consuming the next record");
 					continue;
 				}
-				try {
-					consumer.commitSync();
-				} catch (Error e) {
-					System.out.println("There was a problem committing the offset");
-					continue;
-				}
 				for (ConsumerRecord<String, AccountEvent> consumerRecord : records) {
+					try {
+//						if (processPartitionOffset(consumerRecord))
+//							continue;
+						consumer.commitSync();
+					} catch (Error e) {
+						System.out.println("There was a problem committing the offset");
+						continue;
+					}
 					AccountEvent accountEvent = (AccountEvent) consumerRecord.value();
 					System.out.println("Consuming event from customer-event-topic with id/key of: "
 							+ consumerRecord.key() + " - offset: " + consumerRecord.offset() + " - partition: "
@@ -207,6 +216,58 @@ public class Consumer {
 			shutdownConsumerProducer();
 			System.out.println("Shutting down kafka account consumer");
 		}).start();
+	}
+
+	private boolean processPartitionOffset(ConsumerRecord<String, AccountEvent> consumerRecord) {
+		if (!recordContainsPartition(consumerRecord)) {
+			System.out.println("#1");
+			TopicPartition topicPartition = fetchTopicPartition(consumerRecord);
+			if (topicPartition == null) {
+				System.out.println("#2");
+				return false;
+			}
+			System.out.println("do we get here 1?");
+			Map<TopicPartition, OffsetAndMetadata> committed = consumer.committed(assignment);
+			System.out.println("do we get here 2?");
+			OffsetAndMetadata offsetAndMetadata = committed.get(topicPartition);
+			if (offsetAndMetadata == null) {
+				System.out.println("offsetAndMetadata is null at partition: " + topicPartition.partition());
+				consumer.seek(topicPartition, 0);
+				return true;
+			}
+			System.out.println("do we get here 3?");
+			long lastCommittedOffset = offsetAndMetadata.offset();
+			System.out.println("lastCommittedOffset: " + lastCommittedOffset);
+			consumer.seek(topicPartition, lastCommittedOffset);
+			System.out.println("#3");
+			System.out.println("**** processed partition offset against partition: " + topicPartition.partition()
+					+ " at offset position: " + lastCommittedOffset + " ****");
+			return true;
+		}
+		return false;
+	}
+
+	private TopicPartition fetchTopicPartition(ConsumerRecord<String, AccountEvent> consumerRecord) {
+		for (TopicPartition topicPartition : assignment) {
+			if (consumerRecord.partition() == topicPartition.partition()) {
+				System.out.println("#4");
+				return topicPartition;
+			}
+		}
+		System.out.println("#5");
+		return null;
+	}
+
+	private boolean recordContainsPartition(ConsumerRecord<String, AccountEvent> consumerRecord) {
+		for (TopicPartition topicPartition : assignment) {
+			if (consumerRecord.partition() == topicPartition.partition()) {
+				System.out.println("#6");
+				return true;
+			}
+		}
+		System.out.println("#7");
+		assignment = consumer.assignment();
+		return false;
 	}
 
 	private void determineBeginSnapshotOffset() {
@@ -241,12 +302,13 @@ public class Consumer {
 
 	private Properties buildConsumerProperties() {
 		Properties properties = new Properties();
-		properties.put("bootstrap.servers", "localhost:29092,localhost:39092,localhost:49092");
-		properties.put("group.id", "account-event-topic-group-v3");
-		properties.put("enable.auto.commit", "false");
-		properties.put("max.poll.records", "1");
-		properties.put("key.deserializer", StringDeserializer.class);
-		properties.put("value.deserializer", KafkaAvroDeserializer.class);
+		properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:29092,localhost:39092,localhost:49092");
+		properties.put(ConsumerConfig.GROUP_ID_CONFIG, "account-event-topic-group-v3");
+		properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
+		properties.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, "1");
+		properties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+		properties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+		properties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, KafkaAvroDeserializer.class);
 		properties.put("schema.registry.url", "http://localhost:8081");
 		properties.put("specific.avro.reader", "true");
 		return properties;
