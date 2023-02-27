@@ -242,7 +242,7 @@ public class Consumer {
 
 	private Properties buildConsumerProperties() {
 		Properties properties = new Properties();
-		properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:29092,localhost:39092,localhost:49092");
+		properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:39092,localhost:49092,localhost:55092");
 		properties.put(ConsumerConfig.GROUP_ID_CONFIG, "account-event-topic-group-v3");
 		properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false");
 		properties.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, "1");
